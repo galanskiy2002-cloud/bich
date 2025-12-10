@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск вузов Самары</title>
+    <!-- Подключаем Telegram WebApp SDK, как в ЛР6 -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .example-chip {
+            background: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .example-chip:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .results {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .university-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s;
+        }
+
+        .university-card:hover {
+            transform: translateX(5px);
+        }
+
+        .university-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .university-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .detail-value {
+            color: #2d3748;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-score {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge-budget {
+            background: #bee3f8;
+            color: #2a4365;
+        }
+
+        .badge-rating {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #edf2f7;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .university-details {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Поиск вузов Самары</h1>
+            <p>Найдите подходящий вуз по проходному баллу, предметам и рейтингу</p>
+        </div>
+
+        <div class="search-box">
+            <div class="input-group">
+                <input type="text" id="searchInput" placeholder="Например: балл 210 математика бюджет 50...">
+                <button id="searchBtn">Найти</button>  <!-- Кнопка, как в ЛР6 -->
+            </div>
+            <div class="examples">
+                <div class="example-chip" onclick="setExample('балл 210')">балл 210</div>
+                <div class="example-chip" onclick="setExample('математика')">математика</div>
+                <div class="example-chip" onclick="setExample('бюджет 100')">бюджет 100</div>
+                <div class="example-chip" onclick="setExample('рейтинг 8')">рейтинг 8</div>
+                <div class="example-chip" onclick="setExample('балл 200 математика')">комбинированный</div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Ищем подходящие вузы...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="empty-state">
+                <p>🔍 Введите запрос для поиска вузов</p>
+                <p style="font-size: 14px; margin-top: 10px;">Используйте примеры запросов выше</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram WebApp, как в ЛР6
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Настройка MainButton, как в ЛР6
+        tg.MainButton.textColor = "#FFFFFF";
+        tg.MainButton.color = "#2cab37";
+
+        let query = "";  // Аналог item в ЛР6
+
+        let searchBtn = document.getElementById("searchBtn");
+        searchBtn.addEventListener("click", function() {
+            query = document.getElementById('searchInput').value.trim();  // Сохраняем запрос, как item в ЛР6
+            if (!query) {
+                alert("Введите запрос!");
+                return;
+            }
+
+            // Выполняем поиск и отображаем результаты локально (твой оригинальный код)
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            resultsDiv.innerHTML = '';
+            loadingDiv.style.display = 'block';
+
+            fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                if (data.success) {
+                    // Отображаем результаты, как в твоём коде
+                    if (data.universities.length === 0) {
+                        resultsDiv.innerHTML = `
+                            <div class="empty-state">
+                                <p>😕 По вашему запросу ничего не найдено</p>
+                                <p style="font-size: 14px; margin-top: 10px;">Попробуйте изменить критерии поиска</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let avgScore = data.universities.reduce((sum, uni) => sum + uni.score, 0) / data.universities.length;
+                    let totalBudget = data.universities.reduce((sum, uni) => sum + uni.budget, 0);
+                    let avgRating = data.universities.reduce((sum, uni) => sum + uni.rating, 0) / data.universities.length;
+
+                    let html = `
+                        <div class="stats">
+                            <div class="stat-item">
+                                <div class="stat-value">${data.count}</div>
+                                <div class="stat-label">Найдено вузов</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${Math.round(avgScore)}</div>
+                                <div class="stat-label">Средний балл</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${totalBudget}</div>
+                                <div class="stat-label">Всего бюджетных</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${avgRating.toFixed(1)}</div>
+                                <div class="stat-label">Средний рейтинг</div>
+                            </div>
+                        </div>
+                    `;
+
+                    data.universities.forEach((uni, index) => {
+                        html += `
+                            <div class="university-card">
+                                <div class="university-name">
+                                    ${index + 1}. ${uni.name}
+                                </div>
+                                <div class="university-details">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Проходной балл:</span>
+                                        <span class="detail-value badge badge-score">${uni.score}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Предметы ЕГЭ:</span>
+                                        <span class="detail-value">${uni.subjects}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Рейтинг:</span>
+                                        <span class="detail-value badge badge-rating">${uni.rating.toFixed(1)} ★</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Бюджетных мест:</span>
+                                        <span class="detail-value badge badge-budget">${uni.budget}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Стоимость:</span>
+                                        <span class="detail-value">${uni.fee.toLocaleString()} ₽/год</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    resultsDiv.innerHTML = html;
+
+                    // Показываем MainButton, как в ЛР6
+                    if (tg.MainButton.isVisible) {
+                        tg.MainButton.hide();
+                    } else {
+                        tg.MainButton.setText(`Вывести информацию по запросу "${query}"`);  // Как в ЛР6
+                        tg.MainButton.show();
+                    }
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="empty-state">
+                            <p>⚠️ ${data.error || 'Ошибка поиска'}</p>
+                            <button onclick="searchUniversities()" style="margin-top: 20px;">Попробовать снова</button>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                loadingDiv.style.display = 'none';
+                resultsDiv.innerHTML = `
+                    <div class="empty-state">
+                        <p>⚠️ Ошибка соединения с сервером</p>
+                        <button onclick="searchUniversities()" style="margin-top: 20px;">Попробовать снова</button>
+                    </div>
+                `;
+                console.error('Search error:', error);
+            });
+        });
+
+        // Обработка клика на MainButton, как в ЛР6
+        Telegram.WebApp.onEvent("mainButtonClicked", function() {
+            tg.sendData(query);  // Отправляем запрос, как item в ЛР6
+        });
+
+        // Примеры запросов
+        function setExample(text) {
+            document.getElementById('searchInput').value = text;
+            searchBtn.click();  // Автоматически кликаем на кнопку поиска
+        }
+
+        // Поиск при нажатии Enter
+        document.getElementById('searchInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                searchBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
